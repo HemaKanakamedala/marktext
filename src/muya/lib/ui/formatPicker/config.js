@@ -11,31 +11,41 @@ import clearIcon from '../../assets/pngicon/format_clear/2.png'
 const icons = [
   {
     type: 'strong',
-    icon: strongIcon
+    icon: strongIcon,
+    title: 'Bold'
+    // above chang
   }, {
     type: 'em',
-    icon: emphasisIcon
+    icon: emphasisIcon,
+    title: 'Italic'
   }, {
     type: 'u',
-    icon: underlineIcon
+    icon: underlineIcon,
+    title: 'Underline'
   }, {
     type: 'del',
-    icon: strikeIcon
+    icon: strikeIcon,
+    title: 'strike'
   }, {
     type: 'inline_code',
-    icon: codeIcon
+    icon: codeIcon,
+    title: 'code'
   }, {
     type: 'inline_math',
-    icon: mathIcon
+    icon: mathIcon,
+    title: 'math'
   }, {
     type: 'link',
-    icon: linkIcon
+    icon: linkIcon,
+    title: 'link'
   }, {
     type: 'image',
-    icon: imageIcon
+    icon: imageIcon,
+    title: 'image'
   }, {
     type: 'clear',
-    icon: clearIcon
+    icon: clearIcon,
+    title: 'clear'
   }
 ]
 

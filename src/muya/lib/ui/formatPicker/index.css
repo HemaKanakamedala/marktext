@@ -1,6 +1,6 @@
 .ag-format-picker {
-  height: 30px;
-  width: 265px;
+  height: 35px;
+  width: 275px;
 }
 
 .ag-format-picker ul,
@@ -17,6 +17,7 @@
 .ag-format-picker li.item {
   position: relative;
   list-style: none;
+  padding-top: 10px;
   width: 35px;
   height: 30px;
   display: flex;
