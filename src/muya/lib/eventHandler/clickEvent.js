@@ -28,9 +28,9 @@ class ClickEvent {
       if (!start || !end) {
         return
       }
+
       const startBlock = contentState.getBlock(start.key)
       const nextTextBlock = contentState.findNextBlockInLocation(startBlock)
-
       if (
         nextTextBlock && nextTextBlock.key === end.key &&
         end.offset === 0 &&
@@ -66,6 +66,7 @@ class ClickEvent {
       // handler table click
       const toolItem = getToolItem(target)
       contentState.selectedImage = null
+      contentState.selectedTableCells = null
       if (toolItem) {
         event.preventDefault()
         event.stopPropagation()
@@ -75,7 +76,26 @@ class ClickEvent {
           contentState.tableToolBarClick(type)
         }
       }
-      // Handler image and inline math preview click
+      // Handle table drag bar click
+      if (target.classList.contains('ag-drag-handler')) {
+        event.preventDefault()
+        event.stopPropagation()
+        const rect = target.getBoundingClientRect()
+        const reference = {
+          getBoundingClientRect () {
+            return rect
+          },
+          width: rect.offsetWidth,
+          height: rect.offsetHeight
+        }
+        eventCenter.dispatch('muya-table-bar', {
+          reference,
+          tableInfo: {
+            barType: target.classList.contains('left') ? 'left' : 'bottom'
+          }
+        })
+      }
+      // Handle image and inline math preview click
       const markedImageText = target.previousElementSibling
       const mathRender = target.closest(`.${CLASS_OR_ID.AG_MATH_RENDER}`)
       const rubyRender = target.closest(`.${CLASS_OR_ID.AG_RUBY_RENDER}`)
@@ -162,8 +182,15 @@ class ClickEvent {
         event.preventDefault()
         return event.stopPropagation()
       }
+
       if (target.closest('div.ag-container-preview') || target.closest('div.ag-html-preview')) {
-        return event.stopPropagation()
+        event.stopPropagation()
+        if (target.closest('div.ag-container-preview')) {
+          event.preventDefault()
+          const figureEle = target.closest('figure')
+          contentState.handleContainerBlockClick(figureEle)
+        }
+        return
       }
       // handler container preview click
       const editIcon = target.closest('.ag-container-icon')

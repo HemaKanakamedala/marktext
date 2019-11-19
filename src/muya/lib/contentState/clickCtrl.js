@@ -100,6 +100,16 @@ const clickCtrl = ContentState => {
           }
           break
         }
+        /* case 'B': {
+          if (inlineNode.hasAttribute('link')) {
+            formatType = 'strong'
+            data = {
+              text: inlineNode.textContent,
+              href: inlineNode.getAttribute('href')
+            }
+          }
+          break
+        } */
         case 'STRONG': {
           formatType = 'strong'
           data = inlineNode.textContent

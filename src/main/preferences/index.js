@@ -31,7 +31,7 @@ class Preference extends EventEmitter {
    *
    */
   constructor (paths) {
-    // TODO: Preferences should not loaded if global.MARKTEXT_SAFE_MODE is set.
+  // TODO: Preferences should not loaded if global.MARKTEXT_SAFE_MODE is set.
     super()
 
     const { preferencesPath } = paths
@@ -118,7 +118,7 @@ class Preference extends EventEmitter {
     }
 
     Object.keys(settings).map(key => {
-      this.setItem(key, settings[key])
+      return this.setItem(key, settings[key])
     })
   }
 

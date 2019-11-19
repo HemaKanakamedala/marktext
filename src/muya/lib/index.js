@@ -262,6 +262,9 @@ class Muya {
   }
 
   blur () {
+    const selection = document.getSelection()
+
+    selection.removeAllRanges()
     this.container.blur()
   }
 
@@ -321,12 +324,13 @@ class Muya {
   }
 
   selectAll () {
-    if (this.hasFocus()) {
-      this.contentState.selectAll()
-    }
-    const activeElement = document.activeElement
-    if (activeElement.nodeName === 'INPUT') {
-      activeElement.select()
+    this.contentState.selectAll()
+
+    if (!this.hasFocus()) {
+      const activeElement = document.activeElement
+      if (activeElement.nodeName === 'INPUT') {
+        activeElement.select()
+      }
     }
   }
 
@@ -342,8 +346,12 @@ class Muya {
     this.clipboard.pasteAsPlainText()
   }
 
-  copy (name) {
-    this.clipboard.copy(name)
+  /**
+   * Copy the anchor block contains the block with `info`. like copy as markdown.
+   * @param {string|object} key the block key or block
+   */
+  copy (info) {
+    return this.clipboard.copy(info)
   }
 
   setOptions (options, needRender = false) {
@@ -363,6 +371,12 @@ class Muya {
       }
     }
 
+    // Set spellcheck container attribute
+    const spellcheckEnabled = options.spellcheckEnabled
+    if (typeof spellcheckEnabled !== 'undefined') {
+      this.container.setAttribute('spellcheck', !!spellcheckEnabled)
+    }
+
     if (options.bulletListMarker) {
       this.contentState.turndownConfig.bulletListMarker = options.bulletListMarker
     }
@@ -370,6 +384,21 @@ class Muya {
 
   hideAllFloatTools () {
     return this.keyboard.hideAllFloatTools()
+  }
+
+  /**
+   * Replace the word range with the given replacement.
+   *
+   * @param {*} line A line block reference of the line that contains the word to
+   *                 replace - must be a valid reference!
+   * @param {*} wordCursor The range of the word to replace (line: "abc >foo< abc"
+   *                       whereas `>`/`<` is start and end of `wordCursor`). This
+   *                       range is replaced by `replacement`.
+   * @param {string} replacement The replacement.
+   * @param {boolean} setCursor Shoud we update the editor cursor?
+   */
+  replaceWordInline (line, wordCursor, replacement, setCursor = false) {
+    this.contentState.replaceWordInline(line, wordCursor, replacement, setCursor)
   }
 
   destroy () {
@@ -387,7 +416,7 @@ class Muya {
   * [ensureContainerDiv ensure container element is div]
   */
 function getContainer (originContainer, options) {
-  const { hideQuickInsertHint } = options
+  const { hideQuickInsertHint, spellcheckEnabled } = options
   const container = document.createElement('div')
   const rootDom = document.createElement('div')
   const attrs = originContainer.attributes
@@ -403,7 +432,9 @@ function getContainer (originContainer, options) {
   container.setAttribute('contenteditable', true)
   container.setAttribute('autocorrect', false)
   container.setAttribute('autocomplete', 'off')
-  container.setAttribute('spellcheck', false)
+  // NOTE: The browser is not able to correct misspelled words words without
+  // a custom implementation like in Mark Text.
+  container.setAttribute('spellcheck', !!spellcheckEnabled)
   container.appendChild(rootDom)
   originContainer.replaceWith(container)
   return container

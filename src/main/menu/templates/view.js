@@ -60,7 +60,7 @@ export default function (keybindings) {
         actions.layout(item, browserWindow, 'showSideBar')
       }
     }, {
-      label: 'Toggle Tab Bar',
+      label: ' Tab Bar',
       id: 'tabBarMenuItem',
       accelerator: keybindings.getAccelerator('viewToggleTabBar'),
       type: 'checkbox',

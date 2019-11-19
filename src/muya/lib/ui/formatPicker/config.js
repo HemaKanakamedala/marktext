@@ -25,27 +25,27 @@ const icons = [
   }, {
     type: 'del',
     icon: strikeIcon,
-    title: 'Strike'
+    title: 'strike'
   }, {
     type: 'inline_code',
     icon: codeIcon,
-    title: 'Code'
+    title: 'code'
   }, {
     type: 'inline_math',
     icon: mathIcon,
-    title: 'Math'
+    title: 'math'
   }, {
     type: 'link',
     icon: linkIcon,
-    title: 'Link'
+    title: 'link'
   }, {
     type: 'image',
     icon: imageIcon,
-    title: 'Image'
+    title: 'image'
   }, {
     type: 'clear',
     icon: clearIcon,
-    title: 'Clear'
+    title: 'clear'
   }
 ]
 

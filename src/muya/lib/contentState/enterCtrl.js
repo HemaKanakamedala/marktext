@@ -49,18 +49,23 @@ const enterCtrl = ContentState => {
     return container
   }
 
-  ContentState.prototype.createRow = function (row) {
-    const trBlock = this.createBlock('tr')
+  ContentState.prototype.createRow = function (row, isHeader = false) {
+    const tr = this.createBlock('tr')
     const len = row.children.length
     let i
     for (i = 0; i < len; i++) {
-      const tdBlock = this.createBlock('td')
-      const preChild = row.children[i]
-      tdBlock.column = i
-      tdBlock.align = preChild.align
-      this.appendChild(trBlock, tdBlock)
+      const cell = this.createBlock(isHeader ? 'th' : 'td', {
+        align: row.children[i].align,
+        column: i
+      })
+      const cellContent = this.createBlock('span', {
+        functionType: 'cellContent'
+      })
+
+      this.appendChild(cell, cellContent)
+      this.appendChild(tr, cell)
     }
-    return trBlock
+    return tr
   }
 
   ContentState.prototype.createBlockLi = function (paragraphInListItem) {
@@ -264,7 +269,7 @@ const enterCtrl = ContentState => {
     // Insert `<br/>` in table cell if you want to open a new line.
     // Why not use `soft line break` or `hard line break` ?
     // Becasuse table cell only have one line.
-    if (event.shiftKey && /th|td/.test(block.type)) {
+    if (event.shiftKey && block.functionType === 'cellContent') {
       const { text, key } = block
       const brTag = '<br/>'
       block.text = text.substring(0, start.offset) + brTag + text.substring(start.offset)
@@ -297,19 +302,27 @@ const enterCtrl = ContentState => {
     }
 
     // handle enter in table
-    if (/th|td/.test(block.type)) {
-      const row = this.getBlock(block.parent)
+    if (block.functionType === 'cellContent') {
+      const row = this.closest(block, 'tr')
       const rowContainer = this.getBlock(row.parent)
-      const table = this.getBlock(rowContainer.parent)
+      const table = this.closest(rowContainer, 'table')
 
       if (
         (isOsx && event.metaKey) ||
         (!isOsx && event.ctrlKey)
       ) {
-        const nextRow = this.createRow(row)
+        const nextRow = this.createRow(row, false)
         if (rowContainer.type === 'thead') {
-          const tBody = this.getBlock(rowContainer.nextSibling)
-          this.insertBefore(nextRow, tBody.children[0])
+          let tBody = this.getBlock(rowContainer.nextSibling)
+          if (!tBody) {
+            tBody = this.createBlock('tbody')
+            this.appendChild(table, tBody)
+          }
+          if (tBody.children.length) {
+            this.insertBefore(nextRow, tBody.children[0])
+          } else {
+            this.appendChild(tBody, nextRow)
+          }
         } else {
           this.insertAfter(nextRow, row)
         }
@@ -473,7 +486,7 @@ const enterCtrl = ContentState => {
         cursorBlock = tableNeedFocus
         break
       case !!htmlNeedFocus:
-        cursorBlock = htmlNeedFocus.children[0].children[1] // the second line
+        cursorBlock = htmlNeedFocus.children[0].children[0] // the second line
         break
       case !!mathNeedFocus:
         cursorBlock = mathNeedFocus
@@ -485,7 +498,13 @@ const enterCtrl = ContentState => {
 
     cursorBlock = getParagraphBlock(cursorBlock)
     const key = cursorBlock.type === 'p' || cursorBlock.type === 'pre' ? cursorBlock.children[0].key : cursorBlock.key
-    const offset = 0
+    let offset = 0
+    if (htmlNeedFocus) {
+      const { text } = cursorBlock
+      const match = /^[^\n]+\n[^\n]*/.exec(text)
+      offset = match && match[0] ? match[0].length : 0
+    }
+
     this.cursor = {
       start: { key, offset },
       end: { key, offset }

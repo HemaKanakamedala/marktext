@@ -73,6 +73,8 @@
 </template>
 
 <script>
+import { shell } from 'electron'
+import log from 'electron-log'
 import { mapState } from 'vuex'
 import ViewImage from 'view-image'
 import Muya from 'muya/lib'
@@ -86,23 +88,24 @@ import ImageToolbar from 'muya/lib/ui/imageToolbar'
 import Transformer from 'muya/lib/ui/transformer'
 import FormatPicker from 'muya/lib/ui/formatPicker'
 import LinkTools from 'muya/lib/ui/linkTools'
+import TableBarTools from 'muya/lib/ui/tableTools'
 import FrontMenu from 'muya/lib/ui/frontMenu'
-import bus from '../../bus'
 import Search from '../search'
-import { animatedScrollTo } from '../../util'
-import { addCommonStyle, setEditorWidth } from '../../util/theme'
-import { guessClipboardFilePath } from '../../util/clipboard'
-import { showContextMenu } from '../../contextMenu/editor'
-import Printer from '@/services/printService'
+import bus from '@/bus'
 import { DEFAULT_EDITOR_FONT_FAMILY } from '@/config'
-import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
+import { showContextMenu } from '@/contextMenu/editor'
 import notice from '@/services/notification'
+import Printer from '@/services/printService'
+import { offsetToWordCursor, validateLineCursor, SpellChecker } from '@/spellchecker'
+import { isOsx, animatedScrollTo } from '@/util'
+import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
+import { guessClipboardFilePath } from '@/util/clipboard'
+import { addCommonStyle, setEditorWidth } from '@/util/theme'
 
 import 'muya/themes/default.css'
 import '@/assets/themes/codemirror/one-dark.css'
 import 'view-image/lib/imgViewer.css'
 import CloseIcon from '@/assets/icons/close.svg'
-import { shell } from 'electron'
 
 const STANDAR_Y = 320
 
@@ -146,6 +149,11 @@ export default {
       imageFolderPath: state => state.preferences.imageFolderPath,
       theme: state => state.preferences.theme,
       hideScrollbar: state => state.preferences.hideScrollbar,
+      spellcheckerEnabled: state => state.preferences.spellcheckerEnabled,
+      spellcheckerIsHunspell: state => state.preferences.spellcheckerIsHunspell,
+      spellcheckerNoUnderline: state => state.preferences.spellcheckerNoUnderline,
+      spellcheckerAutoDetectLanguage: state => state.preferences.spellcheckerAutoDetectLanguage,
+      spellcheckerLanguage: state => state.preferences.spellcheckerLanguage,
 
       currentFile: state => state.editor.currentFile,
 
@@ -158,6 +166,8 @@ export default {
   data () {
     this.defaultFontFamily = DEFAULT_EDITOR_FONT_FAMILY
     this.CloseIcon = CloseIcon
+    // Helper to ignore changes when the spell check provider was changed in settings.
+    this.spellcheckerIgnorChanges = false
     return {
       selectionChange: null,
       editor: null,
@@ -308,6 +318,88 @@ export default {
         })
       }
     },
+    spellcheckerEnabled: function (value, oldValue) {
+      if (value !== oldValue) {
+        const { editor, spellchecker } = this
+        const { isInitialized } = spellchecker
+
+        // Set Muya's spellcheck container attribute.
+        editor.setOptions({ spellcheckEnabled: value })
+
+        // Spell check is available but not initialized.
+        if (value && !isInitialized) {
+          this.initSpellchecker()
+          return
+        }
+
+        // Enable or disable spell checker.
+        if (isInitialized) {
+          if (value) {
+            this.enableSpellchecker()
+          } else {
+            spellchecker.disableSpellchecker()
+          }
+        }
+      }
+    },
+    spellcheckerIsHunspell: function (value, oldValue) {
+      // Special case when the OS supports multiple spell checker because the
+      // language may be invalid (provider 1 may support language xyz
+      // but provider 2 not). Otherwise ignore this event.
+      const multiProviderSupported = isOsx
+      if (multiProviderSupported && value !== oldValue) {
+        const { spellchecker } = this
+        const { isHunspell } = spellchecker
+        if (value === isHunspell) {
+          this.spellcheckerIgnorChanges = false
+
+          // Apply language from settings that may have changed.
+          const { spellcheckerLanguage } = this
+          const { isEnabled, lang } = spellchecker
+          if (isEnabled && spellcheckerLanguage !== lang) {
+            this.switchSpellcheckLanguage(spellcheckerLanguage)
+          }
+        } else {
+          // Ignore all settings language changes that occur when another
+          // spell check provider is selected.
+          this.spellcheckerIgnorChanges = true
+        }
+      }
+    },
+    spellcheckerNoUnderline: function (value, oldValue) {
+      if (value !== oldValue) {
+        const { editor, spellchecker } = this
+
+        // Set Muya's spellcheck container attribute.
+        editor.setOptions({ spellcheckEnabled: !value })
+
+        const { isEnabled } = spellchecker
+        if (isEnabled) {
+          spellchecker.isPassiveMode = value
+        }
+      }
+    },
+    spellcheckerAutoDetectLanguage: function (value, oldValue) {
+      const { spellchecker } = this
+      const { isEnabled } = spellchecker
+      if (value !== oldValue && isEnabled) {
+        spellchecker.automaticallyIdentifyLanguages = value
+      }
+    },
+    spellcheckerLanguage: function (value, oldValue) {
+      const { spellchecker, spellcheckerIgnorChanges } = this
+      if (!spellcheckerIgnorChanges && value !== oldValue) {
+        const { isEnabled, isInvalidState } = spellchecker
+        if (isEnabled) {
+          this.switchSpellcheckLanguage(value)
+        } else if (isInvalidState) {
+          // Spell checker is in an invalid state due to a missing dictionary and
+          // therefore deactivated. We can safely enable the spell checker again
+          // with the new language.
+          this.enableSpellchecker()
+        }
+      }
+    },
     currentFile: function (value, oldValue) {
       if (value && value !== oldValue) {
         this.scrollToCursor(0)
@@ -341,7 +433,8 @@ export default {
         frontmatterType,
         hideQuickInsertHint,
         editorLineWidth,
-        theme
+        theme,
+        spellcheckerEnabled
       } = this
 
       // use muya UI plugins
@@ -362,6 +455,7 @@ export default {
       Muya.use(LinkTools, {
         jumpClick: this.jumpClick
       })
+      Muya.use(TableBarTools)
 
       const options = {
         focusMode,
@@ -377,6 +471,7 @@ export default {
         listIndentation,
         frontmatterType,
         hideQuickInsertHint,
+        spellcheckEnabled: spellcheckerEnabled,
         imageAction: this.imageAction.bind(this),
         imagePathPicker: this.imagePathPicker.bind(this),
         clipboardFilePath: guessClipboardFilePath,
@@ -396,6 +491,12 @@ export default {
       }
 
       const { container } = this.editor = new Muya(ele, options)
+
+      // Create spell check wrapper and enable spell checking if prefered.
+      this.spellchecker = new SpellChecker(spellcheckerEnabled)
+      if (spellcheckerEnabled) {
+        this.initSpellchecker()
+      }
 
       if (typewriter) {
         this.scrollToCursor()
@@ -424,11 +525,10 @@ export default {
       bus.$on('createParagraph', this.handleParagraph)
       bus.$on('deleteParagraph', this.handleParagraph)
       bus.$on('insertParagraph', this.handleInsertParagraph)
-      bus.$on('editTable', this.handleEditTable)
       bus.$on('scroll-to-header', this.scrollToHeader)
-      bus.$on('copy-block', this.handleCopyBlock)
       bus.$on('print', this.handlePrint)
       bus.$on('screenshot-captured', this.handleScreenShot)
+      bus.$on('switch-spellchecker-language', this.switchSpellcheckLanguage)
 
       this.editor.on('change', changes => {
         // WORKAROUND: "id: 'muya'"
@@ -436,7 +536,6 @@ export default {
       })
 
       this.editor.on('format-click', ({ event, formatType, data }) => {
-        const isOsx = this.platform === 'darwin'
         const ctrlOrMeta = (isOsx && event.metaKey) || (!isOsx && event.ctrlKey)
         if (formatType === 'link' && ctrlOrMeta) {
           this.$store.dispatch('FORMAT_LINK_CLICK', { data, dirname: window.DIRNAME })
@@ -481,8 +580,35 @@ export default {
         this.$store.dispatch('SELECTION_FORMATS', formats)
       })
 
-      this.editor.on('contextmenu', (event, selectionChanges) => {
-        showContextMenu(event, selectionChanges)
+      this.editor.on('contextmenu', (event, selection) => {
+        const { isEnabled } = this.spellchecker
+
+        // NOTE: Right clicking on a misspelled word select the whole word
+        // by Chromium.
+        if (isEnabled && validateLineCursor(selection)) {
+          const { start: startCursor } = selection
+          const { offset: lineOffset } = startCursor
+          const { text } = startCursor.block
+          const wordInfo = SpellChecker.extractWord(text, lineOffset)
+          if (wordInfo) {
+            const { left, right, word } = wordInfo
+
+            // Translate offsets into a cursor with the given line.
+            const wordRange = offsetToWordCursor(selection, left, right)
+            this.spellchecker.getWordSuggestion(word)
+              .then(wordSuggestions => {
+                const replaceCallback = replacement => {
+                  // wordRange := replace this range with the replacement
+                  this.editor.replaceWordInline(selection, wordRange, replacement, true)
+                }
+                showContextMenu(event, selection, this.spellchecker, word, wordSuggestions, replaceCallback)
+              })
+            return
+          }
+        }
+
+        // No word selected or fallback
+        showContextMenu(event, selection, isEnabled ? this.spellchecker : null, '', [], null)
       })
 
       document.addEventListener('keyup', this.keyup)
@@ -496,7 +622,6 @@ export default {
     },
     jumpClick: (linkInfo) => {
       const { href } = linkInfo
-
       if (href && href.startsWith('http')) {
         shell.openExternal(href)
       }
@@ -562,6 +687,107 @@ export default {
 
     setImageViewerVisible (status) {
       this.imageViewerVisible = status
+    },
+
+    // Helper methods for spell checker that are needed multiple times.
+    initSpellchecker () {
+      const {
+        editor,
+        spellchecker,
+        spellcheckerNoUnderline,
+        spellcheckerAutoDetectLanguage,
+        spellcheckerLanguage
+      } = this
+      const { container } = editor
+
+      spellchecker.init(
+        spellcheckerLanguage,
+        spellcheckerAutoDetectLanguage,
+        spellcheckerNoUnderline,
+        container
+      )
+        .catch(error => {
+          log.error(`Error while initializing spell checker for language "${spellcheckerLanguage}":`)
+          log.error(error)
+
+          notice.notify({
+            title: 'Spelling',
+            type: 'error',
+            message: `Error while initializing spell checker for language "${spellcheckerLanguage}": ${error.message}`
+          })
+        })
+    },
+    enableSpellchecker () {
+      const {
+        spellchecker,
+        spellcheckerNoUnderline,
+        spellcheckerAutoDetectLanguage,
+        spellcheckerLanguage
+      } = this
+
+      spellchecker.enableSpellchecker(
+        spellcheckerLanguage,
+        spellcheckerAutoDetectLanguage,
+        spellcheckerNoUnderline
+      )
+        .then(status => {
+          if (!status) {
+            // Unable to switch language due to missing dictionary. The spell checker is now in an invalid state.
+            notice.notify({
+              title: 'Spelling',
+              type: 'warning',
+              message: `Unable to switch to language "${spellcheckerLanguage}". Spell checker is now disabled.`
+            })
+          }
+        })
+        .catch(error => {
+          log.error(`Error while enabling spell checking for "${spellcheckerLanguage}":`)
+          log.error(error)
+
+          notice.notify({
+            title: 'Spelling',
+            type: 'error',
+            message: `Error while enabling spell checking for "${spellcheckerLanguage}": ${error.message}`
+          })
+        })
+    },
+    switchSpellcheckLanguage (languageCode) {
+      const { spellchecker } = this
+      const { isEnabled } = spellchecker
+
+      // This method is also called from bus, so validate state before continuing.
+      if (!isEnabled) {
+        throw new Error('Cannot switch switch because spell checker is disabled!')
+      }
+
+      spellchecker.switchLanguage(languageCode)
+        .then(langCode => {
+          if (!langCode) {
+            // Unable to switch language due to missing dictionary. The spell checker is now in an invalid state.
+            notice.notify({
+              title: 'Spelling',
+              type: 'warning',
+              message: `Unable to switch to language "${languageCode}". Spell checker is now disabled.`
+            })
+          } else if (langCode !== languageCode) {
+            // Unable to switch language but fallback was successful.
+            notice.notify({
+              title: 'Spelling',
+              type: 'warning',
+              message: `Current spelling language is "${langCode}" because "${languageCode}" dictionary is missing.`
+            })
+          }
+        })
+        .catch(error => {
+          log.error(`Error while switching to language "${languageCode}":`)
+          log.error(error)
+
+          notice.notify({
+            title: 'Spelling',
+            type: 'error',
+            message: `Error while switching to "${languageCode}": ${error.message}`
+          })
+        })
     },
 
     handleUndo () {
@@ -753,17 +979,8 @@ export default {
       editor && editor.insertParagraph(location)
     },
 
-    handleEditTable (data) {
-      const { editor } = this
-      editor && editor.editTable(data)
-    },
-
     blurEditor () {
       this.editor.blur()
-    },
-
-    handleCopyBlock (name) {
-      this.editor.copy(name)
     },
 
     handleScreenShot () {
@@ -795,11 +1012,10 @@ export default {
     bus.$off('createParagraph', this.handleParagraph)
     bus.$off('deleteParagraph', this.handleParagraph)
     bus.$off('insertParagraph', this.handleInsertParagraph)
-    bus.$off('editTable', this.handleEditTable)
     bus.$off('scroll-to-header', this.scrollToHeader)
-    bus.$off('copy-block', this.handleCopyBlock)
     bus.$off('print', this.handlePrint)
     bus.$off('screenshot-captured', this.handleScreenShot)
+    bus.$off('switch-spellchecker-language', this.switchSpellcheckLanguage)
 
     document.removeEventListener('keyup', this.keyup)
 
