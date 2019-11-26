@@ -262,14 +262,11 @@ class EditorWindow extends BaseWindow {
     }
 
     if (this.lifecycle === WindowLifecycle.READY) {
-      const { _accessor, browserWindow } = this
-      const { menu: appMenu } = _accessor
-
+      const { browserWindow } = this
       if (this._openedRootDirectory) {
         ipcMain.emit('watcher-unwatch-directory', browserWindow, this._openedRootDirectory)
       }
 
-      appMenu.addRecentlyUsedDocument(pathname)
       this._openedRootDirectory = pathname
       ipcMain.emit('watcher-watch-directory', browserWindow, pathname)
       browserWindow.webContents.send('mt::open-directory', pathname)
@@ -399,16 +396,6 @@ class EditorWindow extends BaseWindow {
   }
 
   // --- private ---------------------------------
-
-  _buildUrlString (windowId, env, userPreference) {
-    const url = this._buildUrlWithSettings(windowId, env, userPreference)
-    const spellcheckerIsHunspell = userPreference.getItem('spellcheckerIsHunspell')
-
-    // Add additional settings
-    url.searchParams.set('slp', spellcheckerIsHunspell ? '1' : '0')
-
-    return url.toString()
-  }
 
   /**
    * Open a new new tab from the markdown document.

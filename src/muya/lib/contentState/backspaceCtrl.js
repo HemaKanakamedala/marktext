@@ -107,10 +107,6 @@ const backspaceCtrl = ContentState => {
       event.preventDefault()
       return this.deleteImage(this.selectedImage)
     }
-    if (this.selectedTableCells) {
-      event.preventDefault()
-      return this.deleteSelectedTableCells()
-    }
   }
 
   ContentState.prototype.backspaceHandler = function (event) {
@@ -126,7 +122,6 @@ const backspaceCtrl = ContentState => {
       return this.deleteImage(this.selectedImage)
     }
 
-    // Handle select all content.
     if (this.isSelectAll()) {
       event.preventDefault()
       this.blocks = [this.createBlockP()]
@@ -207,8 +202,7 @@ const backspaceCtrl = ContentState => {
     // fix bug when the first block is table, these two ways will cause bugs.
     // 1. one paragraph bollow table, selectAll, press backspace.
     // 2. select table from the first cell to the last cell, press backsapce.
-    const maybeCell = this.getParent(startBlock)
-    if (/th/.test(maybeCell.type) && start.offset === 0 && !maybeCell.preSibling) {
+    if (/th/.test(startBlock.type) && start.offset === 0 && !startBlock.preSibling) {
       if (
         end.offset === endBlock.text.length &&
         startOutmostBlock === endOutmostBlock &&
@@ -217,7 +211,7 @@ const backspaceCtrl = ContentState => {
       ) {
         event.preventDefault()
         // need remove the figure block.
-        const figureBlock = this.getBlock(this.closest(startBlock, 'figure'))
+        const figureBlock = this.getBlock(this.findFigure(startBlock))
         // if table is the only block, need create a p block.
         const p = this.createBlockP(endBlock.text.substring(end.offset))
         this.insertBefore(p, figureBlock)
@@ -235,21 +229,6 @@ const backspaceCtrl = ContentState => {
         }
         return this.render()
       }
-    }
-
-    // Fixed #1456 existed bugs `Select one cell and press backspace will cause bug`
-    if (startBlock.functionType === 'cellContent' && this.cursor.start.offset === 0 && this.cursor.end.offset !== 0 && this.cursor.end.offset === startBlock.text.length) {
-      event.preventDefault()
-      event.stopPropagation()
-      startBlock.text = ''
-      const { key } = startBlock
-      const offset = 0
-      this.cursor = {
-        start: { key, offset },
-        end: { key, offset }
-      }
-
-      return this.singleRender(startBlock)
     }
 
     // If select multiple paragraph or multiple characters in one paragraph, just let
@@ -303,7 +282,7 @@ const backspaceCtrl = ContentState => {
     }
 
     // Fix issue #1218
-    if (startBlock.functionType === 'cellContent' && /<br\/>.{1}$/.test(startBlock.text)) {
+    if (/th|td/.test(startBlock.type) && /<br\/>.{1}$/.test(startBlock.text)) {
       event.preventDefault()
       event.stopPropagation()
 
@@ -319,26 +298,11 @@ const backspaceCtrl = ContentState => {
       return this.singleRender(startBlock)
     }
 
-    // Fix delete the last character in table cell, the default action will delete the cell content if not preventDefault.
-    if (startBlock.functionType === 'cellContent' && left === 1 && right === 0) {
-      event.stopPropagation()
-      event.preventDefault()
-      startBlock.text = ''
-      const { key } = startBlock
-      const offset = 0
-      this.cursor = {
-        start: { key, offset },
-        end: { key, offset }
-      }
-
-      return this.singleRender(startBlock)
-    }
-
     const tableHasContent = table => {
       const tHead = table.children[0]
       const tBody = table.children[1]
-      const tHeadHasContent = tHead.children[0].children.some(th => th.children[0].text.trim())
-      const tBodyHasContent = tBody.children.some(row => row.children.some(td => td.children[0].text.trim()))
+      const tHeadHasContent = tHead.children[0].children.some(th => th.text.trim())
+      const tBodyHasContent = tBody.children.some(row => row.children.some(td => td.text.trim()))
       return tHeadHasContent || tBodyHasContent
     }
 
@@ -384,23 +348,24 @@ const backspaceCtrl = ContentState => {
         }
         this.partialRender()
       }
-    } else if (left === 0 && block.functionType === 'cellContent') {
+    } else if (left === 0 && /th|td/.test(block.type)) {
       event.preventDefault()
       event.stopPropagation()
-      const table = this.closest(block, 'table')
-      const figure = this.closest(table, 'figure')
+      const tHead = this.getBlock(parent.parent)
+      const table = this.getBlock(tHead.parent)
+      const figure = this.getBlock(table.parent)
       const hasContent = tableHasContent(table)
       let key
       let offset
 
-      if ((!preBlock || preBlock.functionType !== 'cellContent') && !hasContent) {
-        const paragraphContent = this.createBlock('span')
+      if ((!preBlock || !/th|td/.test(preBlock.type)) && !hasContent) {
+        const newLine = this.createBlock('span')
         delete figure.functionType
         figure.children = []
-        this.appendChild(figure, paragraphContent)
+        this.appendChild(figure, newLine)
         figure.text = ''
         figure.type = 'p'
-        key = paragraphContent.key
+        key = newLine.key
         offset = 0
       } else if (preBlock) {
         key = preBlock.key

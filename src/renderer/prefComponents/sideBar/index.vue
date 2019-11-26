@@ -9,11 +9,11 @@
         placeholder="Search preference..."
         :trigger-on-focus="false"
         @select="handleSelect">
-        <em
+        <i
           class="el-icon-search el-input__icon"
           slot="suffix"
         >
-        </em>
+        </i>
         <template slot-scope="{ item }">
           <div class="name">{{ item.category }}</div>
           <span class="addr">{{ item.preference }}</span>

@@ -67,12 +67,8 @@ const updateCtrl = ContentState => {
    */
   ContentState.prototype.checkInlineUpdate = function (block) {
     // table cell can not have blocks in it
-    if (/figure/.test(block.type)) {
-      return false
-    }
-    if (/cellContent|codeContent|languageInput/.test(block.functionType)) {
-      return false
-    }
+    if (/th|td|figure/.test(block.type)) return false
+    if (/codeContent|languageInput/.test(block.functionType)) return false
 
     let line = null
     const { text } = block

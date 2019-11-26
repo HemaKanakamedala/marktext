@@ -70,9 +70,7 @@ export default function link (h, cursor, block, token, outerClass) {
           ...this.backlashInToken(h, token.backlash.first, className, firstBacklashStart, token)
         ]),
         h(`span.${className}.${CLASS_OR_ID.AG_REMOVE}`, middleBracket),
-        h(`span.${linkClassName}.${CLASS_OR_ID.AG_REMOVE}`, {
-          attrs: { spellcheck: 'false' }
-        }, [
+        h(`span.${linkClassName}.${CLASS_OR_ID.AG_REMOVE}`, [
           ...hrefContent,
           ...this.backlashInToken(h, token.backlash.second, className, secondBacklashStart, token)
         ]),

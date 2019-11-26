@@ -1,5 +1,4 @@
 import { getMenuItemById } from '../../menu'
-// import { ipcMain } from 'electron'
 
 const typewriterModeMenuItemId = 'typewriterModeMenuItem'
 const focusModeMenuItemId = 'focusModeMenuItem'
@@ -20,17 +19,13 @@ export const layout = (item, win, type) => {
   win.webContents.send('AGANI::listen-for-view-layout', { [type]: item.checked })
 }
 
-/* CHnaged code
-export const showTabBar = win => {
-  ipcMain.emit('set-user-preference', { win })
-} */
-
 export const showTabBar = win => {
   const tabBarMenuItem = getMenuItemById('tabBarMenuItem')
   if (tabBarMenuItem && !tabBarMenuItem.checked && tabBarMenuItem.click) {
     tabBarMenuItem.click(tabBarMenuItem, win)
   }
 }
+
 // --- IPC events -------------------------------------------------------------
 
 // NOTE: Don't use static `getMenuItemById` here, instead request the menu by

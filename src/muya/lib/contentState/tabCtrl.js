@@ -40,27 +40,25 @@ const BOTH_SIDES_FORMATS = ['strong', 'em', 'inline_code', 'image', 'link', 'ref
 
 const tabCtrl = ContentState => {
   ContentState.prototype.findNextCell = function (block) {
-    if (block.functionType !== 'cellContent') {
+    if (!(/td|th/.test(block.type))) {
       throw new Error('only th and td can have next cell')
     }
-    const cellBlock = this.getParent(block)
-    const nextSibling = this.getBlock(cellBlock.nextSibling)
-    const rowBlock = this.getBlock(cellBlock.parent)
-    const tbOrTh = this.getBlock(rowBlock.parent)
+    const nextSibling = this.getBlock(block.nextSibling)
+    const parent = this.getBlock(block.parent)
+    const tbOrTh = this.getBlock(parent.parent)
     if (nextSibling) {
-      return this.firstInDescendant(nextSibling)
+      return nextSibling
     } else {
-      if (rowBlock.nextSibling) {
-        const nextRow = this.getBlock(rowBlock.nextSibling)
-        return this.firstInDescendant(nextRow)
+      if (parent.nextSibling) {
+        const nextRow = this.getBlock(parent.nextSibling)
+        return nextRow.children[0]
       } else if (tbOrTh.type === 'thead') {
         const tBody = this.getBlock(tbOrTh.nextSibling)
         if (tBody && tBody.children.length) {
-          return this.firstInDescendant(tBody)
+          return tBody.children[0].children[0]
         }
       }
     }
-
     return false
   }
 
@@ -371,22 +369,19 @@ const tabCtrl = ContentState => {
 
     // Handle `tab` key in table cell.
     let nextCell
-    if (start.key === end.key && startBlock.functionType === 'cellContent') {
+    if (start.key === end.key && /th|td/.test(startBlock.type)) {
       nextCell = this.findNextCell(startBlock)
-    } else if (endBlock.functionType === 'cellContent') {
+    } else if (/th|td/.test(endBlock.type)) {
       nextCell = endBlock
     }
     if (nextCell) {
-      const { key } = nextCell
-
-      const offset = 0
+      const key = nextCell.key
       this.cursor = {
-        start: { key, offset },
-        end: { key, offset }
+        start: { key, offset: 0 },
+        end: { key, offset: 0 }
       }
 
-      const figure = this.closest(nextCell, 'figure')
-      return this.singleRender(figure)
+      return this.partialRender()
     }
 
     if (this.isIndentableListItem()) {

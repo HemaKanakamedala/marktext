@@ -11,11 +11,7 @@ export default function inlineCode (h, cursor, block, token, outerClass) {
 
   return [
     h(`span.${className}.${CLASS_OR_ID.AG_REMOVE}`, startMarker),
-    h(`code.${CLASS_OR_ID.AG_INLINE_RULE}`, {
-      attrs: {
-        spellcheck: 'false'
-      }
-    }, content),
+    h(`code.${CLASS_OR_ID.AG_INLINE_RULE}`, content),
     h(`span.${className}.${CLASS_OR_ID.AG_REMOVE}`, endMarker)
   ]
 }

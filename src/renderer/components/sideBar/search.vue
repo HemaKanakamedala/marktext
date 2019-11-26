@@ -58,7 +58,7 @@
           size="mini"
           @click="cancelSearcher"
         >
-          Cancel <em class="el-icon-video-pause"></em>
+          Cancel <i class="el-icon-video-pause"></i>
         </el-button>
       </div>
       <div v-if="searchResult.length" class="search-result-info">{{searchResultInfo}}</div>

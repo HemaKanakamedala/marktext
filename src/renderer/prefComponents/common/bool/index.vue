@@ -2,11 +2,12 @@
   <section class="pref-switch-item" :class="{'ag-underdevelop': disable}">
     <div class="description">
       <span>{{description}}</span>
-      <em class="el-icon-info" v-if="more"
+      <i class="el-icon-info" v-if="more"
         @click="handleMoreClick"
-      ></em>
+      ></i>
     </div>
     <el-switch
+      style="display: block"
       v-model="status"
       @change="handleSwitchChange"
       :active-text="status ? 'On': 'Off'">

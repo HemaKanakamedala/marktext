@@ -20,7 +20,6 @@ export default function htmlTag (h, cursor, block, token, outerClass) {
       return Array.isArray(chunk) ? [...acc, ...chunk] : [...acc, chunk]
     }, [])
     : ''
-
   switch (tag) {
     // Handle html img.
     case 'img': {
@@ -50,12 +49,6 @@ export default function htmlTag (h, cursor, block, token, outerClass) {
             raw: token.raw
           }
         }
-
-        // Disable spell checking for these tags
-        if (tag === 'code' || tag === 'kbd') {
-          Object.assign(data.attrs, { spellcheck: 'false' })
-        }
-
         if (attrs.id) {
           selector += `#${attrs.id}`
         }
@@ -73,17 +66,9 @@ export default function htmlTag (h, cursor, block, token, outerClass) {
         }
 
         return [
-          h(`span.${tagClassName}.${CLASS_OR_ID.AG_OUTPUT_REMOVE}`, {
-            attrs: {
-              spellcheck: 'false'
-            }
-          }, openContent),
+          h(`span.${tagClassName}.${CLASS_OR_ID.AG_OUTPUT_REMOVE}`, openContent),
           h(`${selector}`, data, anchor),
-          h(`span.${tagClassName}.${CLASS_OR_ID.AG_OUTPUT_REMOVE}`, {
-            attrs: {
-              spellcheck: 'false'
-            }
-          }, closeContent)
+          h(`span.${tagClassName}.${CLASS_OR_ID.AG_OUTPUT_REMOVE}`, closeContent)
         ]
       }
   }

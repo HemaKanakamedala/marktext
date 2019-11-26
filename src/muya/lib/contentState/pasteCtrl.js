@@ -329,7 +329,7 @@ const pasteCtrl = ContentState => {
       return this.partialRender()
     }
 
-    if (startBlock.functionType === 'cellContent') {
+    if (/th|td/.test(startBlock.type)) {
       const pendingText = text.trim().replace(/\n/g, '<br/>')
       startBlock.text = startBlock.text.substring(0, start.offset) + pendingText + startBlock.text.substring(end.offset)
       const { key } = startBlock

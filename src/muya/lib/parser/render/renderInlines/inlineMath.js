@@ -43,9 +43,7 @@ export default function displayMath (h, cursor, block, token, outerClass) {
   return [
     h(`span.${className}.${CLASS_OR_ID.AG_MATH_MARKER}`, startMarker),
     h(mathSelector, [
-      h(`span.${CLASS_OR_ID.AG_INLINE_RULE}.${CLASS_OR_ID.AG_MATH_TEXT}`, {
-        attrs: { spellcheck: 'false' }
-      }, content),
+      h(`span.${CLASS_OR_ID.AG_INLINE_RULE}.${CLASS_OR_ID.AG_MATH_TEXT}`, content),
       h(previewSelector, {
         attrs: { contenteditable: 'false' }
       }, mathVnode)

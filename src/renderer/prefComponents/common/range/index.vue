@@ -2,9 +2,9 @@
   <section class="pref-range-item" :class="{'ag-underdevelop': disable}">
     <div class="description">
       <span>{{description}}: <span class="value">{{selectValue + (unit ? unit : '')}}</span></span>
-      <em class="el-icon-info" v-if="more"
+      <i class="el-icon-info" v-if="more"
         @click="handleMoreClick"
-      ></em>
+      ></i>
     </div>
     <el-slider
       v-model="selectValue"

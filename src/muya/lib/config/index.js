@@ -6,7 +6,7 @@ import voidHtmlTags from 'html-tags/void'
 // Electron 2.0.2 not support yet! So give a default value 4
 export const DEVICE_MEMORY = navigator.deviceMemory || 4 // Get the divice memory number(Chrome >= 63)
 export const UNDO_DEPTH = DEVICE_MEMORY >= 4 ? 100 : 50
-export const HAS_TEXT_BLOCK_REG = /^span$/i
+export const HAS_TEXT_BLOCK_REG = /^(span|th|td)/i
 export const VOID_HTML_TAGS = voidHtmlTags
 export const HTML_TAGS = htmlTags
 // TYPE1 ~ TYPE7 according to https://github.github.com/gfm/#html-blocks
@@ -255,10 +255,6 @@ export const MUYA_DEFAULT_OPTION = {
   mermaidTheme: 'default', // dark / forest / default
   vegaTheme: 'latimes', // excel / ggplot2 / quartz / vox / fivethirtyeight / dark / latimes
   hideQuickInsertHint: false,
-  // Whether we should set spellcheck attribute on our container to highlight misspelled words.
-  // NOTE: The browser is not able to correct misspelled words words without a custom
-  // implementation like in Mark Text.
-  spellcheckEnabled: false,
   // transform the image to local folder, cloud or just return the local path
   imageAction: null,
   // Call Electron open dialog or input element type is file.

@@ -8,9 +8,7 @@ import backspaceCtrl from './backspaceCtrl'
 import deleteCtrl from './deleteCtrl'
 import codeBlockCtrl from './codeBlockCtrl'
 import tableBlockCtrl from './tableBlockCtrl'
-import tableDragBarCtrl from './tableDragBarCtrl'
-import tableSelectCellsCtrl from './tableSelectCellsCtrl'
-import coreApi from './core'
+import selectionCtrl from './selectionCtrl'
 import History from './history'
 import arrowCtrl from './arrowCtrl'
 import pasteCtrl from './pasteCtrl'
@@ -33,9 +31,9 @@ import Cursor from '../selection/cursor'
 import escapeCharactersMap, { escapeCharacters } from '../parser/escapeCharacter'
 
 const prototypes = [
-  coreApi,
   tabCtrl,
   enterCtrl,
+  selectionCtrl,
   updateCtrl,
   backspaceCtrl,
   deleteCtrl,
@@ -44,8 +42,6 @@ const prototypes = [
   pasteCtrl,
   copyCutCtrl,
   tableBlockCtrl,
-  tableDragBarCtrl,
-  tableSelectCellsCtrl,
   paragraphCtrl,
   formatCtrl,
   searchCtrl,
@@ -84,35 +80,7 @@ class ContentState {
     this.turndownConfig = Object.assign(DEFAULT_TURNDOWN_CONFIG, { bulletListMarker })
     this.fontSize = 16
     this.lineHeight = 1.6
-    // table drag bar
-    this.dragInfo = null
-    this.isDragTableBar = false
-    this.dragEventIds = []
-    // table cell select
-    this.cellSelectInfo = null
-    this._selectedTableCells = null
-    this.cellSelectEventIds = []
     this.init()
-  }
-
-  set selectedTableCells (info) {
-    const oldSelectedTableCells = this._selectedTableCells
-    if (!info && !!oldSelectedTableCells) {
-      const selectedCells = this.muya.container.querySelectorAll('.ag-cell-selected')
-
-      for (const cell of Array.from(selectedCells)) {
-        cell.classList.remove('ag-cell-selected')
-        cell.classList.remove('ag-cell-border-top')
-        cell.classList.remove('ag-cell-border-right')
-        cell.classList.remove('ag-cell-border-bottom')
-        cell.classList.remove('ag-cell-border-left')
-      }
-    }
-    this._selectedTableCells = info
-  }
-
-  get selectedTableCells () {
-    return this._selectedTableCells
   }
 
   set selectedImage (image) {
@@ -443,16 +411,26 @@ class ContentState {
     }
   }
 
+  // help func in removeBlocks
+  findFigure (block) {
+    if (block.type === 'figure') {
+      return block.key
+    } else {
+      const parent = this.getBlock(block.parent)
+      return this.findFigure(parent)
+    }
+  }
+
   /**
    * remove blocks between before and after, and includes after block.
    */
   removeBlocks (before, after, isRemoveAfter = true, isRecursion = false) {
     if (!isRecursion) {
       if (/td|th/.test(before.type)) {
-        this.exemption.add(this.closest(before, 'figure'))
+        this.exemption.add(this.findFigure(before))
       }
       if (/td|th/.test(after.type)) {
-        this.exemption.add(this.closest(after, 'figure'))
+        this.exemption.add(this.findFigure(after))
       }
     }
     let nextSibling = this.getBlock(before.nextSibling)
@@ -732,31 +710,6 @@ class ContentState {
     const { blocks } = this
     const len = blocks.length
     return this.lastInDescendant(blocks[len - 1])
-  }
-
-  closest (block, type) {
-    if (!block) {
-      return null
-    }
-    if (type instanceof RegExp ? type.test(block.type) : block.type === type) {
-      return block
-    } else {
-      const parent = this.getParent(block)
-      return this.closest(parent, type)
-    }
-  }
-
-  getAnchor (block) {
-    const { type, functionType } = block
-    if (type !== 'span') {
-      return null
-    }
-
-    if (functionType === 'codeContent' || functionType === 'cellContent') {
-      return this.closest(block, 'figure') || this.closest(block, 'pre')
-    } else {
-      return this.getParent(block)
-    }
   }
 
   clear () {

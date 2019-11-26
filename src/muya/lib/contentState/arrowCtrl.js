@@ -15,42 +15,38 @@ const adjustOffset = (offset, block, event) => {
 
 const arrowCtrl = ContentState => {
   ContentState.prototype.findNextRowCell = function (cell) {
-    if (cell.functionType !== 'cellContent') {
+    if (!/th|td/.test(cell.type)) {
       throw new Error(`block with type ${cell && cell.type} is not a table cell`)
     }
-    const thOrTd = this.getParent(cell)
-    const row = this.closest(cell, 'tr')
-    const rowContainer = this.closest(row, /thead|tbody/) // thead or tbody
-    const column = row.children.indexOf(thOrTd)
+    const row = this.getParent(cell)
+    const rowContainer = this.getParent(row) // thead or tbody
+    const column = row.children.indexOf(cell)
     if (rowContainer.type === 'thead') {
       const tbody = this.getNextSibling(rowContainer)
       if (tbody && tbody.children.length) {
-        return tbody.children[0].children[column].children[0]
+        return tbody.children[0].children[column]
       }
     } else if (rowContainer.type === 'tbody') {
       const nextRow = this.getNextSibling(row)
       if (nextRow) {
-        return nextRow.children[column].children[0]
+        return nextRow.children[column]
       }
     }
     return null
   }
 
   ContentState.prototype.findPrevRowCell = function (cell) {
-    if (cell.functionType !== 'cellContent') {
-      throw new Error(`block with type ${cell && cell.type} is not a table cell`)
-    }
-    const thOrTd = this.getParent(cell)
-    const row = this.closest(cell, 'tr')
+    if (!/th|td/.test(cell.type)) throw new Error(`block with type ${cell && cell.type} is not a table cell`)
+    const row = this.getParent(cell)
     const rowContainer = this.getParent(row) // thead or tbody
     const rowIndex = rowContainer.children.indexOf(row)
-    const column = row.children.indexOf(thOrTd)
+    const column = row.children.indexOf(cell)
     if (rowContainer.type === 'tbody') {
       if (rowIndex === 0 && rowContainer.preSibling) {
         const thead = this.getPreSibling(rowContainer)
-        return thead.children[0].children[column].children[0]
+        return thead.children[0].children[column]
       } else if (rowIndex > 0) {
-        return this.getPreSibling(row).children[column].children[0]
+        return this.getPreSibling(row).children[column]
       }
       return null
     }
@@ -122,12 +118,12 @@ const arrowCtrl = ContentState => {
       (event.key === EVENT_KEYS.ArrowUp && topOffset > 0) ||
       (event.key === EVENT_KEYS.ArrowDown && bottomOffset > 0)
     ) {
-      if (!/pre/.test(block.type) || block.functionType !== 'cellContent') {
+      if (!/pre|th|td/.test(block.type)) {
         return
       }
     }
 
-    if (block.functionType === 'cellContent') {
+    if (/th|td/.test(block.type)) {
       let activeBlock
       const cellInNextRow = this.findNextRowCell(block)
       const cellInPrevRow = this.findPrevRowCell(block)

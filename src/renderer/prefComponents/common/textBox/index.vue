@@ -2,9 +2,9 @@
   <section class="pref-text-box-item" :class="{'ag-underdevelop': disable}">
     <div class="description">
       <span>{{description}}</span>
-      <em class="el-icon-info" v-if="more"
+      <i class="el-icon-info" v-if="more"
         @click="handleMoreClick"
-      ></em>
+      ></i>
     </div>
     <el-input
       class="input"

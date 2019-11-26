@@ -42,6 +42,7 @@
   line-height: 30px;
   color: var(--editorColor);
   box-shadow: var(--floatShadow);
+  display: none;
 }
 
 .ag-image-toolbar li.item div.tooltip::before {

@@ -216,53 +216,33 @@ const importRegister = ContentState => {
             //       We have to re-escape the chraracter to not break the table.
             return text.replace(/\|/g, '\\|')
           }
-          let i
-          let j
-          const headerLen = header.length
-          for (i = 0; i < headerLen; i++) {
-            const headText = header[i]
+          for (const headText of header) {
+            const i = header.indexOf(headText)
             const th = this.createBlock('th', {
-              align: align[i] || '',
-              column: i
+              text: restoreTableEscapeCharacters(headText)
             })
-            const cellContent = this.createBlock('span', {
-              text: restoreTableEscapeCharacters(headText),
-              functionType: 'cellContent'
-            })
-            this.appendChild(th, cellContent)
+            Object.assign(th, { align: align[i] || '', column: i })
             this.appendChild(theadRow, th)
           }
-          const rowLen = cells.length
-          for (i = 0; i < rowLen; i++) {
+          for (const row of cells) {
             const rowBlock = this.createBlock('tr')
-            const rowContents = cells[i]
-            const colLen = rowContents.length
-            for (j = 0; j < colLen; j++) {
-              const cell = rowContents[j]
+            for (const cell of row) {
+              const i = row.indexOf(cell)
               const td = this.createBlock('td', {
-                align: align[j] || '',
-                column: j
+                text: restoreTableEscapeCharacters(cell)
               })
-              const cellContent = this.createBlock('span', {
-                text: restoreTableEscapeCharacters(cell),
-                functionType: 'cellContent'
-              })
-
-              this.appendChild(td, cellContent)
+              Object.assign(td, { align: align[i] || '', column: i })
               this.appendChild(rowBlock, td)
             }
             this.appendChild(tbody, rowBlock)
           }
-
           Object.assign(table, { row: cells.length, column: header.length - 1 }) // set row and column
           block = this.createBlock('figure')
           block.functionType = 'table'
           this.appendChild(thead, theadRow)
           this.appendChild(block, table)
           this.appendChild(table, thead)
-          if (tbody.children.length) {
-            this.appendChild(table, tbody)
-          }
+          this.appendChild(table, tbody)
           this.appendChild(parentList[0], block)
           break
         }
@@ -378,8 +358,8 @@ const importRegister = ContentState => {
     html = html.replace(/<span>&nbsp;<\/span>/g, String.fromCharCode(160))
 
     html = turnSoftBreakToSpan(html)
-    const markdown = turndownService.turndown(html)
 
+    const markdown = turndownService.turndown(html)
     return markdown
   }
 

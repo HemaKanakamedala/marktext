@@ -501,7 +501,7 @@ var parser = function() {
                     return !0;
                 }
             }
-            // return !0;
+            return !0;
         }
     }, lexer = function() {
         var lexer = {

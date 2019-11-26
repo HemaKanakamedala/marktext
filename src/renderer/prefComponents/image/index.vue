@@ -4,7 +4,7 @@
     <section class="image-ctrl">
       <div>The default behavior after insert image from local folder.
         <el-tooltip class='item' effect='dark' content='Mark Text can not get image path from paste event on Linux.' placement='top-start'>
-          <em class="el-icon-info"></em>
+          <i class="el-icon-info"></i>
         </el-tooltip>
       </div>
       <el-radio-group v-model="imageInsertAction">

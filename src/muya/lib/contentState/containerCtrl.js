@@ -68,8 +68,8 @@ const containerCtrl = ContentState => {
     return preBlock.children[0].children[0]
   }
 
-  ContentState.prototype.handleContainerBlockClick = function (figureEle) {
-    const { id } = figureEle
+  ContentState.prototype.handleContainerBlockClick = function (figure) {
+    const { id } = figure
     const mathBlock = this.getBlock(id)
     const preBlock = mathBlock.children[0]
     const firstLine = preBlock.children[0].children[0]

@@ -27,7 +27,6 @@ const parseUrlArgs = () => {
   const userDataPath = params.get('udp')
   const windowId = Number(params.get('wid'))
   const type = params.get('type')
-  const spellcheckerIsHunspell = params.get('slp') === '1'
 
   if (Number.isNaN(windowId)) {
     throw new Error('Error while parsing URL arguments: windowId!')
@@ -44,8 +43,7 @@ const parseUrlArgs = () => {
       hideScrollbar,
       theme,
       titleBarStyle
-    },
-    spellcheckerIsHunspell
+    }
   }
 }
 
@@ -60,31 +58,20 @@ const bootstrapRenderer = () => {
 
   // Register renderer exception handler
   window.addEventListener('error', event => {
-    if (event.error) {
-      const { message, name, stack } = event.error
-      const copy = {
-        message,
-        name,
-        stack
-      }
-
-      exceptionLogger(event.error)
-
-      // Pass exception to main process exception handler to show a error dialog.
-      ipcRenderer.send('AGANI::handle-renderer-error', copy)
-    } else {
-      console.error(event)
+    const { message, name, stack } = event.error
+    const copy = {
+      message,
+      name,
+      stack
     }
+
+    exceptionLogger(event.error)
+
+    // Pass exception to main process exception handler to show a error dialog.
+    ipcRenderer.send('AGANI::handle-renderer-error', copy)
   })
 
-  const {
-    debug,
-    initialState,
-    userDataPath,
-    windowId,
-    type,
-    spellcheckerIsHunspell
-  } = parseUrlArgs()
+  const { debug, initialState, userDataPath, windowId, type } = parseUrlArgs()
   const paths = new RendererPaths(userDataPath)
   const marktext = {
     initialState,
@@ -97,11 +84,6 @@ const bootstrapRenderer = () => {
     paths
   }
   global.marktext = marktext
-
-  // Set option to always use Hunspell instead OS spell checker.
-  if (spellcheckerIsHunspell) {
-    process.env['SPELLCHECKER_PREFER_HUNSPELL'] = 1 // eslint-disable-line dot-notation
-  }
 
   configureLogger()
 }
