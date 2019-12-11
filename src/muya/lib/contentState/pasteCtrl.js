@@ -259,7 +259,6 @@ const pasteCtrl = ContentState => {
 
     if (start.key !== end.key) {
       this.cutHandler()
-      return this.pasteHandler(event, type, rawText, rawHtml)
     }
 
     // NOTE: We should parse HTML if we can and use it instead the image (see GH#1271).
@@ -329,7 +328,7 @@ const pasteCtrl = ContentState => {
       return this.partialRender()
     }
 
-    if (/th|td/.test(startBlock.type)) {
+    if (startBlock.functionType === 'cellContent') {
       const pendingText = text.trim().replace(/\n/g, '<br/>')
       startBlock.text = startBlock.text.substring(0, start.offset) + pendingText + startBlock.text.substring(end.offset)
       const { key } = startBlock
